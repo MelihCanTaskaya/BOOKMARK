@@ -1,0 +1,36 @@
+<script>
+  const token = localStorage.getItem("token");
+  console.log("Loaded token in homepage:", token); // ❗ kontrol
+  if (!token) {
+    alert("No token, redirecting to login");
+    window.location.href = "login.html";
+  }
+</script>
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bookmarks</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>My Bookmarks</h1>
+    <button onclick="logout()">Logout</button>
+    <form id="bookmark-form">
+      <input type="text" id="url" placeholder="Bookmark URL" required />
+      <input type="text" id="title" placeholder="Title" required />
+      <input type="text" id="tags" placeholder="Tags (comma separated)" />
+      <button type="submit">Add</button>
+    </form>
+    <form id="filter-form">
+      <input type="text" id="filter-tag" placeholder="Search by tag"/>
+      <button type="submit">Filter</button>
+    </form>
+    <button id="toggle-most-visited">Show Most Visited</button>
+    <div id="bookmarks"></div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

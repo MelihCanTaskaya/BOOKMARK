@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bookmark Manager</title>
+</head>
+<body>
+  <h1>Bookmarks</h1>
+
+  <input type="text" id="search" placeholder="Search by tag..." />
+  <button onclick="searchByTag()">Search</button>
+  <button onclick="loadBookmarks()">All</button>
+  <button onclick="toggleMostVisitedSort()">Sort by Most Visited</button>
+  <button onclick="logout()">Logout</button>
+
+  <form id="bookmark-form">
+    <input type="text" id="url" placeholder="URL" required />
+    <input type="text" id="title" placeholder="Title" />
+    <input type="text" id="tags" placeholder="Comma-separated tags" />
+    <button type="submit">Add Bookmark</button>
+  </form>
+
+  <div id="bookmarks"></div>
+
+  <script>
+    let sortDesc = true;
+
+    if (!localStorage.getItem("token")) {
+      window.location.href = "login.html";
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      window.location.href = "login.html";
+    }
+
+    document.getElementById("bookmark-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const url = document.getElementById("url").value.trim();
+      const title = document.getElementById("title").value.trim();
+      const tags = document.getElementById("tags").value.split(",").map(t => t.trim()).filter(Boolean);
+
+      const res = await fetch("http://localhost:5000/api/bookmarks/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + localStorage.getItem("token")
+        },
+        body: JSON.stringify({ url, title, tags })
+      });
+
+      if (res.ok) {
+        document.getElementById("url").value = "";
+        document.getElementById("title").value = "";
+        document.getElementById("tags").value = "";
+        loadBookmarks();
+      } else {
+        const err = await res.json();
+        alert("Failed to add bookmark: " + err.error);
+      }
+    });
+
+    async function loadBookmarks() {
+      const res = await fetch("http://localhost:5000/api/bookmarks/", {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token")
+        }
+      });
+
+      if (!res.ok) return alert("Failed to load bookmarks");
+
+      const bookmarks = await res.json();
+      displayBookmarks(bookmarks);
+    }
+
+    function displayBookmarks(bookmarks) {
+      const container = document.getElementById("bookmarks");
+      container.innerHTML = "";
+      for (const b of bookmarks) {
+        const el = document.createElement("div");
+        el.innerHTML = `
+          <div>
+            <a href="${b.url}" target="_blank">${b.title}</a>
+            <button onclick="deleteBookmark(${b.id})">Delete</button>
+            <div>Tags: ${(b.tags || []).join(", ")}</div>
+          </div>
+        `;
+        container.appendChild(el);
+      }
+    }
+
+    async function deleteBookmark(id) {
+      await fetch("http://localhost:5000/api/bookmarks/" + id, {
+        method: "DELETE",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token")
+        }
+      });
+      loadBookmarks();
+    }
+
+    async function searchByTag() {
+      const tag = document.getElementById("search").value.trim();
+      if (!tag) return loadBookmarks();
+
+      const res = await fetch(`http://localhost:5000/api/bookmarks/?tag=${tag}`, {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token")
+        }
+      });
+
+      if (!res.ok) return alert("Search failed");
+
+      const bookmarks = await res.json();
+      displayBookmarks(bookmarks);
+    }
+
+    async function toggleMostVisitedSort() {
+      const res = await fetch("http://localhost:5000/api/bookmarks/stats/most_visited", {
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("token")
+        }
+      });
+
+      if (!res.ok) return alert("Failed to fetch most visited");
+
+      const bookmarks = await res.json();
+      const sorted = bookmarks.sort((a, b) =>
+        sortDesc ? b.visits - a.visits : a.visits - b.visits
+      );
+      sortDesc = !sortDesc;
+      displayBookmarks(sorted);
+    }
+
+    loadBookmarks();
+  </script>
+</body>
+</html>
